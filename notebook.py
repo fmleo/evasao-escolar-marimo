@@ -57,9 +57,9 @@ def _(a, file_dir, mo, pd):
         df = pd.read_csv(file_dir, sep=";")
     except Exception:
         a(mo.md("Erro ao ler arquivo local, tentando ler arquivo remoto"))
-        import requests
+        import requests, io
         file = requests.get(file_dir)
-        df = pd.read_csv(file.content)
+        df = pd.read_csv(io.BytesIO(file.content), sep=";")
     return (df,)
 
 

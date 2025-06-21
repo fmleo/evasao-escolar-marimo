@@ -1,0 +1,11 @@
+[project]
+name = "base-evasao-01"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "google-genai>=1.21.1",
+    "marimo>=0.13.11",
+    "pandas>=2.2.3",
+]

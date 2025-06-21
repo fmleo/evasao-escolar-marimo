@@ -45,17 +45,18 @@ def _(mo):
 
 @app.cell
 def _(a, mo):
-    file_dir = mo.notebook_dir() / "public" / "data.csv"
+    file_dir = mo.notebook_location() / "public" / "data.csv"
 
     a(mo.md(f"Tentando carregar arquivo {file_dir}"))
     return (file_dir,)
 
 
 @app.cell
-def _(file_dir, pd):
+def _(a, file_dir, mo, pd):
     try:
         df = pd.read_csv(file_dir, sep=";")
     except FileNotFoundError:
+        a(mo.md("Erro ao ler arquivo local, tentando ler arquivo remoto"))
         import requests
         file = requests.get(file_dir)
         df = pd.read_csv(file.content)

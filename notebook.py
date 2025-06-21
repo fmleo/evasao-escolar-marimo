@@ -85,78 +85,10 @@ def _(a, df, mo):
     return
 
 
-@app.cell
-def _(a, df, mo, pd):
-    a(mo.md("###Tipos de dados"))
-
-    numericas = [
-        "Previous qualification (grade)",
-        "Admission grade",
-        "Age at enrollment",
-        "Curricular units 1st sem (credited)",
-        "Curricular units 1st sem (enrolled)",
-        "Curricular units 1st sem (evaluations)",
-        "Curricular units 1st sem (approved)",
-        "Curricular units 1st sem (grade)",
-        "Curricular units 1st sem (without evaluations)",
-        "Curricular units 2nd sem (credited)",
-        "Curricular units 2nd sem (enrolled)",
-        "Curricular units 2nd sem (evaluations)",
-        "Curricular units 2nd sem (approved)",
-        "Curricular units 2nd sem (grade)",
-        "Curricular units 2nd sem (without evaluations)",
-        "Unemployment rate",
-        "Inflation rate",
-        "GDP",
-    ]
-
-    alvos = ["Target"]
-
-    categoricas = [col for col in df.columns if col not in numericas + alvos]
-
-    def _():
-        tipos_de_dados = []
-
-        for col, dtype in zip(df.columns, df.dtypes):
-            tipo = None
-            categorias = None
-            if col in alvos:
-                tipo = "Alvo"
-            elif col in numericas:
-                tipo = "Numérica"
-            elif col in categoricas:
-                tipo = "Categórica"
-                categorias = sorted(pd.unique(df[col]))
-
-            tipos_de_dados.append(
-                {
-                    "Coluna": col,
-                    "Tipo": tipo,
-                    "Categorias": categorias,
-                    "dtype": dtype,
-                }
-            )
-
-        a(pd.DataFrame(tipos_de_dados))
-
-    _()
-
-    a(
-        mo.md(
-            "A separação entre dados categóricos e numéricos foi feita manualmente, com base nas informações do dataset fornecido no repositório citado no começo da página"
-        )
-    )
-    return categoricas, numericas
-
-
 @app.cell(hide_code=True)
-def _(a, mo, pd):
-    a(
-        mo.md(
-            "esta célula é responsável por rotular as variáveis categóricas com base nas informações do dataset."
-        )
-    )
-
+def _(pd):
+    # esta célula é responsável por rotular as variáveis categóricas com base nas informações do dataset.
+    
     YES_NO = {1: "Yes", 0: "No"}
 
     rotulos = {
@@ -437,6 +369,77 @@ def _(a, mo, pd):
         return df_rotulado
 
     return aplicar_rotulos, rotulos
+
+
+@app.cell
+def _(a, df, mo, pd, rotulos):
+    a(mo.md("###Tipos de dados"))
+
+    numericas = [
+        "Previous qualification (grade)",
+        "Admission grade",
+        "Age at enrollment",
+        "Curricular units 1st sem (credited)",
+        "Curricular units 1st sem (enrolled)",
+        "Curricular units 1st sem (evaluations)",
+        "Curricular units 1st sem (approved)",
+        "Curricular units 1st sem (grade)",
+        "Curricular units 1st sem (without evaluations)",
+        "Curricular units 2nd sem (credited)",
+        "Curricular units 2nd sem (enrolled)",
+        "Curricular units 2nd sem (evaluations)",
+        "Curricular units 2nd sem (approved)",
+        "Curricular units 2nd sem (grade)",
+        "Curricular units 2nd sem (without evaluations)",
+        "Unemployment rate",
+        "Inflation rate",
+        "GDP",
+    ]
+
+    alvos = ["Target"]
+
+    categoricas = [col for col in df.columns if col not in numericas + alvos]
+
+
+    def _():
+        tipos_de_dados = []
+
+        for col, dtype in zip(df.columns, df.dtypes):
+            tipo = None
+            categorias = None
+            if col in alvos:
+                tipo = "Alvo"
+            elif col in numericas:
+                tipo = "Numérica"
+            elif col in categoricas:
+                tipo = "Categórica"
+                categorias = df[col].drop_duplicates().sort_values()
+
+            tipo = {
+                "Coluna": col,
+                "Tipo": tipo,
+                "dtype": dtype,
+            }
+
+            if categorias is not None:
+                if rotulos.get(col):
+                    tipo["Categorias"] = categorias.map(rotulos.get(col))
+                else:
+                    tipo["Categorias"] = categorias
+
+            tipos_de_dados.append(tipo)
+
+        a(pd.DataFrame(tipos_de_dados))
+
+
+    _()
+
+    a(
+        mo.md(
+            "A separação entre dados categóricos e numéricos foi feita manualmente, com base nas informações do dataset fornecido no repositório citado no começo da página"
+        )
+    )
+    return categoricas, numericas
 
 
 @app.cell

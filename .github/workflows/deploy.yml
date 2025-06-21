@@ -1,3 +1,8 @@
+on:
+  push:
+    branches: ["main"] # Trigger on pushes to main branch
+  workflow_dispatch: # Allow manual triggering from the GitHub UI
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,12 +19,12 @@ jobs:
 
       - name: 📄 Export notebook
         run: |
-          uv run marimo export html-wasm notebook.py -o path/to/output --mode run
+          uv run marimo export html-wasm notebook.py -o _site --mode run
 
       - name: 📦 Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: path/to/output
+          path: _site
 
   deploy:
     needs: build

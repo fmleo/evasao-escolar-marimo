@@ -10,3 +10,5 @@ wheels/
 .venv
 
 scratchpad.py
+
+_site

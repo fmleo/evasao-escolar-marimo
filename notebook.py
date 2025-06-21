@@ -55,7 +55,7 @@ def _(a, mo):
 def _(a, file_dir, mo, pd):
     try:
         df = pd.read_csv(file_dir, sep=";")
-    except FileNotFoundError:
+    except Exception:
         a(mo.md("Erro ao ler arquivo local, tentando ler arquivo remoto"))
         import requests
         file = requests.get(file_dir)
@@ -149,7 +149,7 @@ def _(a, df, mo, pd):
     return categoricas, numericas
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(a, mo, pd):
     a(
         mo.md(

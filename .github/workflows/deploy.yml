@@ -26,6 +26,10 @@ jobs:
         with:
           path: _site
 
+      - name: Move data to _site
+        run: |
+          cp data.csv _site/data.csv
+
   deploy:
     needs: build
     runs-on: ubuntu-latest

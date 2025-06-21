@@ -14,6 +14,18 @@ def _():
 
 
 @app.cell
+def _():
+    import micropip
+    return (micropip,)
+
+
+@app.cell
+async def _(micropip):
+    await micropip.install("plotly")
+    return
+
+
+@app.cell
 def _(pd):
     pd.options.plotting.backend = "plotly"
     return
@@ -32,8 +44,21 @@ def _(mo):
 
 
 @app.cell
-def _(mo, pd):
-    df = pd.read_csv(mo.notebook_dir() / "public" / "data.csv", sep=";")
+def _(a, mo):
+    file_dir = mo.notebook_dir() / "public" / "data.csv"
+
+    a(mo.md(f"Tentando carregar arquivo {file_dir}"))
+    return (file_dir,)
+
+
+@app.cell
+def _(file_dir, pd):
+    try:
+        df = pd.read_csv(file_dir, sep=";")
+    except FileNotFoundError:
+        import requests
+        file = requests.get(file_dir)
+        df = pd.read_csv(file.content)
     return (df,)
 
 

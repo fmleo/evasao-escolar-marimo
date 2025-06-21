@@ -33,7 +33,7 @@ def _(mo):
 
 @app.cell
 def _(mo, pd):
-    df = pd.read_csv(mo.notebook_dir() / "data.csv", sep=";")
+    df = pd.read_csv(mo.notebook_dir() / "public" / "data.csv", sep=";")
     return (df,)
 
 
@@ -384,7 +384,9 @@ def _(a, mo, pd):
         "International": YES_NO,
     }
 
-    def aplicar_rotulos(df: pd.DataFrame, rotulos_dict: dict[str, dict[int, str]], inplace=False):
+    def aplicar_rotulos(
+        df: pd.DataFrame, rotulos_dict: dict[str, dict[int, str]], inplace=False
+    ):
         """
         Aplica rótulos às variáveis categóricas
 
@@ -393,7 +395,7 @@ def _(a, mo, pd):
         rotulos_dict: Dicionário com os rótulos
         inplace: Se True, modifica o DataFrame original
 
-        Returns: 
+        Returns:
         DataFrame com rótulos aplicados
         """
 
@@ -407,6 +409,7 @@ def _(a, mo, pd):
                 df_rotulado[coluna] = df_rotulado[coluna].map(mapeamento)
 
         return df_rotulado
+
     return aplicar_rotulos, rotulos
 
 
@@ -456,7 +459,7 @@ def _(a, aplicar_rotulos, categoricas, df, mo, rotulos):
 
     def _():
         rotulado = aplicar_rotulos(df, rotulos)
-    
+
         for c in categoricas:
             counted_df = (
                 rotulado[c].value_counts(normalize=True).head(3) * 100
@@ -497,7 +500,6 @@ def _(a, aplicar_rotulos, categoricas, df, mo, rotulos):
     def _():
         rotulado = aplicar_rotulos(df, rotulos)
 
-    
         for c in categoricas:
             a(rotulado[c].hist())
 

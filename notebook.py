@@ -8,6 +8,7 @@ app = marimo.App(width="medium")
 def _():
     import marimo as mo
     import pandas as pd
+    import numpy as np
 
     a = mo.output.append
     return a, mo, pd
@@ -23,6 +24,13 @@ def _():
 async def _(micropip):
     await micropip.install("plotly")
     return
+
+
+@app.cell
+def _():
+    import plotly.express as px
+    import plotly.graph_objects as go
+    return (px,)
 
 
 @app.cell
@@ -64,6 +72,12 @@ def _(a, file_dir, mo, pd):
 
 
 @app.cell
+def _(df):
+    df["Target"] = df["Target"].replace(["Dropout", "Graduate", "Enrolled"], [0, 1, 2])
+    return
+
+
+@app.cell
 def _(mo):
     mo.md(r"""#Exploração Inicial da Base""")
     return
@@ -88,7 +102,7 @@ def _(a, df, mo):
 @app.cell(hide_code=True)
 def _(pd):
     # esta célula é responsável por rotular as variáveis categóricas com base nas informações do dataset.
-    
+
     YES_NO = {1: "Yes", 0: "No"}
 
     rotulos = {
@@ -340,6 +354,11 @@ def _(pd):
         "Tuition fees up to date": YES_NO,
         "Scholarship holder": YES_NO,
         "International": YES_NO,
+        "Target": {
+            0: "Dropout",
+            1: "Graduate",
+            2: "Enrolled",
+        }
     }
 
     def aplicar_rotulos(
@@ -523,14 +542,84 @@ def _(mo):
 
 
 @app.cell
-def _(a, aplicar_rotulos, categoricas, df, mo, rotulos):
+def _(a, mo):
     a(mo.md("##Gráficos exploratórios"))
+    return
+
+
+@app.cell
+def _(a, aplicar_rotulos, categoricas, df, mo, px, rotulos):
+    a(mo.md("###Histogramas"))
 
     def _():
         rotulado = aplicar_rotulos(df, rotulos)
 
         for c in categoricas:
-            a(rotulado[c].hist())
+            fig = px.histogram(
+                rotulado,
+                x=c,
+                title=f'Histograma de {c}'
+            )
+            a(fig)
+
+    _()
+    return
+
+
+@app.cell
+def _(a, aplicar_rotulos, df, px, rotulos):
+    def _():
+        rotulado = aplicar_rotulos(df, rotulos)
+
+        a(
+            px.histogram(rotulado["Nacionality"][rotulado["Nacionality"] != "Portuguese"], 
+                         title="Nacionalidade sem contar portugueses")
+        )
+
+        a(px.histogram(rotulado["Target"], title="Alvo"))
+    
+
+    _()
+    return
+
+
+@app.cell
+def _(a, df, mo, numericas, px):
+    a(mo.md("###Boxplots"))
+
+    def _():
+        figs = []
+
+        for c in numericas:
+            fig = px.box(df, y=c, title=f'{c}')
+            # Add all data points to the boxplot for better insight
+            # fig.update_traces(boxpoints='all', jitter=0.3)
+            figs.append(fig)
+
+        rows = [mo.hstack(figs[i:i+2]) for i in range(0, len(figs), 2)]
+
+        a(mo.vstack(rows))
+
+    _()
+    return
+
+
+@app.cell
+def _(a, categoricas, df, mo, numericas, px):
+    a(mo.md("###Heatmaps"))
+
+    def _():
+        a(mo.md("Numéricas"))
+        numericas_corr = df[numericas + ["Target"]].corr()
+        a(px.imshow(numericas_corr))
+
+        a(mo.md("Categóricas"))
+        categoricas_corr = df[categoricas + ["Target"]].corr()
+        a(px.imshow(categoricas_corr))
+
+        a(mo.md("Ambas"))
+        df_corr = df.corr()
+        a(px.imshow(df_corr))
 
     _()
     return

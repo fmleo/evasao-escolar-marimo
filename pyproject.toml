@@ -8,4 +8,5 @@ dependencies = [
     "marimo>=0.13.11",
     "pandas>=2.2.3",
     "plotly>=6.1.2",
+    "python-lsp-server>=1.12.2",
 ]

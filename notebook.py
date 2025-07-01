@@ -66,6 +66,7 @@ def _(a, file_dir, mo, pd):
     except Exception:
         a(mo.md("Erro ao ler arquivo local, tentando ler arquivo remoto"))
         import requests, io
+
         file = requests.get(file_dir)
         df = pd.read_csv(io.BytesIO(file.content), sep=";")
     return (df,)
@@ -73,7 +74,9 @@ def _(a, file_dir, mo, pd):
 
 @app.cell
 def _(df):
-    df["Target"] = df["Target"].replace(["Dropout", "Graduate", "Enrolled"], [0, 1, 2])
+    df["Target"] = df["Target"].replace(
+        ["Dropout", "Graduate", "Enrolled"], [0, 1, 2]
+    )
     return
 
 
@@ -95,7 +98,6 @@ def _(a, df, mo):
 
     a(f"Linhas: {df.shape[0]}")
     a(f"Colunas: {df.shape[1]}")
-
     return
 
 
@@ -358,8 +360,9 @@ def _(pd):
             0: "Dropout",
             1: "Graduate",
             2: "Enrolled",
-        }
+        },
     }
+
 
     def aplicar_rotulos(
         df: pd.DataFrame, rotulos_dict: dict[str, dict[int, str]], inplace=False
@@ -386,7 +389,6 @@ def _(pd):
                 df_rotulado[coluna] = df_rotulado[coluna].map(mapeamento)
 
         return df_rotulado
-
     return aplicar_rotulos, rotulos
 
 
@@ -505,6 +507,7 @@ def _(a, aplicar_rotulos, categoricas, df, mo, rotulos):
     """)
     )
 
+
     def _():
         rotulado = aplicar_rotulos(df, rotulos)
 
@@ -520,6 +523,7 @@ def _(a, aplicar_rotulos, categoricas, df, mo, rotulos):
                     selection=None,
                 )
             )
+
 
     _()
     return
@@ -551,16 +555,14 @@ def _(a, mo):
 def _(a, aplicar_rotulos, categoricas, df, mo, px, rotulos):
     a(mo.md("###Histogramas"))
 
+
     def _():
         rotulado = aplicar_rotulos(df, rotulos)
 
         for c in categoricas:
-            fig = px.histogram(
-                rotulado,
-                x=c,
-                title=f'Histograma de {c}'
-            )
+            fig = px.histogram(rotulado, x=c, title=f"Histograma de {c}")
             a(fig)
+
 
     _()
     return
@@ -572,12 +574,14 @@ def _(a, aplicar_rotulos, df, px, rotulos):
         rotulado = aplicar_rotulos(df, rotulos)
 
         a(
-            px.histogram(rotulado["Nacionality"][rotulado["Nacionality"] != "Portuguese"], 
-                         title="Nacionalidade sem contar portugueses")
+            px.histogram(
+                rotulado["Nacionality"][rotulado["Nacionality"] != "Portuguese"],
+                title="Nacionalidade sem contar portugueses",
+            )
         )
 
         a(px.histogram(rotulado["Target"], title="Alvo"))
-    
+
 
     _()
     return
@@ -587,18 +591,20 @@ def _(a, aplicar_rotulos, df, px, rotulos):
 def _(a, df, mo, numericas, px):
     a(mo.md("###Boxplots"))
 
+
     def _():
         figs = []
 
         for c in numericas:
-            fig = px.box(df, y=c, title=f'{c}')
+            fig = px.box(df, y=c, title=f"{c}")
             # Add all data points to the boxplot for better insight
             # fig.update_traces(boxpoints='all', jitter=0.3)
             figs.append(fig)
 
-        rows = [mo.hstack(figs[i:i+2]) for i in range(0, len(figs), 2)]
+        rows = [mo.hstack(figs[i : i + 2]) for i in range(0, len(figs), 2)]
 
         a(mo.vstack(rows))
+
 
     _()
     return
@@ -607,6 +613,7 @@ def _(a, df, mo, numericas, px):
 @app.cell
 def _(a, categoricas, df, mo, numericas, px):
     a(mo.md("###Heatmaps"))
+
 
     def _():
         a(mo.md("Numéricas"))
@@ -620,6 +627,678 @@ def _(a, categoricas, df, mo, numericas, px):
         a(mo.md("Ambas"))
         df_corr = df.corr()
         a(px.imshow(df_corr))
+
+
+    _()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""#Preparação""")
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""##Definição do problema""")
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        rf"""
+    ###Variável alvo:
+    **Target**
+
+    O problema é formulado como uma tarefa de classificação em três categorias: 
+
+    - **dropout** (desistente)
+    - **enrolled** (matriculado)
+    - **graduate** (graduado)
+
+    como o resultado alvo é uma de 3 categorias, o problema se trata de uma classificação
+    """
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ##Pré-processamento
+    Com base na página de informações do dataset:
+    > **Algum pré processamento dos dados foi realizado?**
+    >
+    > Nós realizamos um pré processamento de dados rigoroso para filtrar os dados de anomalias, outliers inexplicáveis e valores faltantes.
+
+    Mas como os valores de categorias não foram normalizados, aplicaremos a estratégia de **One Hot Encoding** nas colunas categóricas e **Min Max Scaling** nas colúnas numéricas
+    """
+    )
+    return
+
+
+@app.cell
+def _(df, numericas, pd):
+    from sklearn.preprocessing import MinMaxScaler
+
+    scaler = MinMaxScaler()
+    scaled = scaler.fit_transform(df[numericas])
+
+    numeric_scaled_df = pd.DataFrame(
+        scaled, columns=scaler.get_feature_names_out(numericas)
+    )
+
+    mm_df_num = numeric_scaled_df
+
+    mm_df_num
+    return (mm_df_num,)
+
+
+@app.cell
+def _(categoricas, df, pd):
+    from sklearn.preprocessing import OneHotEncoder
+
+    encoder = OneHotEncoder(handle_unknown="ignore")
+
+    encoded = encoder.fit_transform(df[categoricas]).toarray()
+
+    categoricas_ohe = encoder.get_feature_names_out(categoricas)
+
+    categorical_oh_encoded_df = pd.DataFrame(encoded, columns=categoricas_ohe)
+
+
+    oh_df_cat = categorical_oh_encoded_df
+
+    oh_df_cat
+    return (oh_df_cat,)
+
+
+@app.cell
+def _(df, mm_df_num, oh_df_cat, pd):
+    # Normalizado
+
+    ndf = pd.concat([mm_df_num, oh_df_cat, df["Target"]], axis=1)
+    ndf
+    return (ndf,)
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ###Divisão de treino/teste
+
+    Também seguindo as informações do dataset, podemos ver que o split (divisão) foi definido como: 
+
+    - 80% para treinamento
+    - 20% para testes
+    """
+    )
+    return
+
+
+@app.cell
+def _(a, mo, ndf):
+    from sklearn.model_selection import train_test_split
+
+    a(mo.md("##Divisão do dataset"))
+
+    X = ndf.drop("Target", axis=1)
+    y = ndf["Target"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, train_size=0.8, test_size=0.2
+    )
+
+    a(
+        mo.md(f"""
+    **Base de treinamento:**
+
+    | formato     | features        | alvos           |
+    |-------------|-----------------|-----------------|
+    | treinamento | {X_train.shape} | {y_train.shape} |
+    | teste       | {X_test.shape}  | {y_test.shape}  |
+
+    """)
+    )
+    return X_test, X_train, y_test, y_train
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    #Comparação de algoritmos
+    ## Algoritmos usados
+    """
+    )
+    return
+
+
+@app.cell
+def _():
+    classification_reports = {}
+    return (classification_reports,)
+
+
+@app.cell
+def _(px):
+    # Confusion matrix
+
+    from sklearn.metrics import confusion_matrix
+
+    values = ["Dropout", "Graduate", "Enrolled"]
+
+
+    def cm_heatmap(test, pred):
+        cm = confusion_matrix(test, pred)
+
+        return px.imshow(
+            cm,
+            labels={"x": "Previsto", "y": "Verdadeiro"},
+            x=values,
+            y=values,
+            text_auto=True,
+        )
+    return cm_heatmap, values
+
+
+@app.cell
+def _(pd):
+    from sklearn.metrics import accuracy_score, classification_report
+
+
+    def cr_table(test, pred):
+        cr = classification_report(test, pred, output_dict=True)
+        crdf = pd.DataFrame.from_dict(cr)
+
+        return crdf
+    return (cr_table,)
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ### Naive Bayes
+
+    Modelo probabilístico simples e rápido, assume independência entre variáveis.
+    """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    # def _():
+    #     from sklearn.naive_bayes import GaussianNB, CategoricalNB
+    #     from sklearn.metrics import log_loss
+    #     from scipy.special import logsumexp
+
+    #     gnb = GaussianNB()
+    #     cnb = CategoricalNB()
+
+    #     gnb_fit = gnb.fit(X_train[numericas], y_train)
+    #     cnb_fit = cnb.fit(X_train[categoricas_ohe], y_train)
+
+    #     log_joint_num = gnb._joint_log_likelihood(X_test[numericas])
+    #     log_joint_cat = cnb._joint_log_likelihood(X_test[categoricas_ohe])
+
+    #     class_log_prior = gnb.class_log_prior_
+
+    #     combined_log_joint_likelihood = log_joint_num + log_joint_cat - class_log_prior
+
+    #     log_posterior_proba = combined_log_joint_likelihood - logsumexp(combined_log_joint_likelihood, axis=1, keepdims=True)
+
+    #     posterior_proba = np.exp(log_posterior_proba)
+
+    #     predicted_classes = np.argmax(posterior_proba, axis=1)
+
+    #     accuracy = accuracy_score(y_test, predicted_classes)
+
+    #     return accuracy
+
+    # _()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    O algoritmo foi testado, mas devido à natureza mista (dados numéricos e categóricos) do dataset, é consideravelmente trabalhoso aplicar o algoritmo na base atual, mesmo com ajustes
+
+    - https://stackoverflow.com/a/14255284
+    """
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ### Árvore de Decisão
+    Estrutura que divide dados com regras, fácil de interpretar.
+    """
+    )
+    return
+
+
+@app.cell
+def _(
+    X_test,
+    X_train,
+    a,
+    classification_reports,
+    cm_heatmap,
+    cr_table,
+    y_test,
+    y_train,
+):
+    from sklearn.tree import DecisionTreeClassifier
+    # from sklearn.tree import export_graphviz
+    # import graphviz
+
+
+    def _():
+        clf = DecisionTreeClassifier()
+
+        clf = clf.fit(X_train, y_train)
+
+        y_pred = clf.predict(X_test)
+
+        cr = cr_table(y_test, y_pred)
+        classification_reports["Árvore de Decisão"] = cr
+
+        a(cr)
+        a(cm_heatmap(y_test, y_pred))
+
+        """
+        dot_string = export_graphviz(
+            clf,
+            feature_names=numericas + list(categoricas_ohe),
+            class_names=values,
+        )
+
+        graph = graphviz.Source(dot_string)
+
+        a(type(graph))
+
+        a(dir(graph))
+
+        a(graph._repr_mimebundle_())
+
+        a(graph)
+        """
+
+
+    _()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ### Random Forest
+    Conjunto de árvores que melhora precisão e reduz overfitting.
+    """
+    )
+    return
+
+
+@app.cell
+def _(
+    X_test,
+    X_train,
+    a,
+    classification_reports,
+    cm_heatmap,
+    cr_table,
+    y_test,
+    y_train,
+):
+    from sklearn.ensemble import RandomForestClassifier
+
+
+    def _():
+        clf = RandomForestClassifier()
+
+        clf.fit(X_train, y_train)
+
+        y_pred = clf.predict(X_test)
+
+        cr = cr_table(y_test, y_pred)
+        classification_reports["Random Forest"] = cr
+
+        a(cr)
+        a(cm_heatmap(y_test, y_pred))
+
+
+    _()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ### KNN
+    Classifica com base na proximidade dos exemplos mais próximos.
+    """
+    )
+    return
+
+
+@app.cell
+def _(
+    X_test,
+    X_train,
+    a,
+    classification_reports,
+    cm_heatmap,
+    cr_table,
+    y_test,
+    y_train,
+):
+    from sklearn.neighbors import KNeighborsClassifier
+
+
+    def _():
+        clf = KNeighborsClassifier()
+
+        clf.fit(X_train, y_train)
+
+        y_pred = clf.predict(X_test)
+
+        cr = cr_table(y_test, y_pred)
+        classification_reports["KNN"] = cr
+
+        a(cr)
+        a(cm_heatmap(y_test, y_pred))
+
+
+    _()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ### Support Vector Machines
+    Separa classes com a maior margem possível entre elas.
+    """
+    )
+    return
+
+
+@app.cell
+def _(
+    X_test,
+    X_train,
+    a,
+    classification_reports,
+    cm_heatmap,
+    cr_table,
+    y_test,
+    y_train,
+):
+    from sklearn.svm import SVC
+
+
+    def _():
+        clf = SVC()
+
+        clf.fit(X_train, y_train)
+
+        y_pred = clf.predict(X_test)
+
+        cr = cr_table(y_test, y_pred)
+        classification_reports["Support Vector Machines"] = cr
+
+        a(cr)
+        a(cm_heatmap(y_test, y_pred))
+
+
+    _()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ### Redes Neurais
+    Modelo com várias camadas que aprende padrões complexos.
+    """
+    )
+    return
+
+
+@app.cell
+def _(
+    X_test,
+    X_train,
+    a,
+    classification_reports,
+    cm_heatmap,
+    cr_table,
+    y_test,
+    y_train,
+):
+    from sklearn.neural_network import MLPClassifier
+
+
+    def _():
+        clf = MLPClassifier(
+            solver="lbfgs",
+            alpha=1e-5,
+            hidden_layer_sizes=(5, 2),
+            random_state=1,
+            max_iter=1000,
+        )
+
+        clf.fit(X_train, y_train)
+
+        y_pred = clf.predict(X_test)
+
+        cr = cr_table(y_test, y_pred)
+        classification_reports["Redes Neurais"] = cr
+
+        a(cr)
+        a(cm_heatmap(y_test, y_pred))
+
+
+    _()
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""## Comparação""")
+    return
+
+
+@app.cell
+def _(classification_reports):
+    classification_reports
+    return
+
+
+@app.cell
+def _(classification_reports):
+    def map_cr_values(col, row):
+        mapped = {}
+        for k, v in classification_reports.items():
+            mapped[k] = v[col][row]
+
+        mapped = {
+            k: v
+            for k, v in sorted(
+                mapped.items(), key=lambda item: item[1], reverse=True
+            )
+        }
+
+        return mapped
+    return (map_cr_values,)
+
+
+@app.cell
+def _(a, map_cr_values, mo, values):
+    a(mo.md("Algoritmos mais balanceados (f1-score):"))
+
+
+    def _():
+        for k, v in enumerate(values):
+            a(mo.md(v + ":"))
+            mapped = map_cr_values(str(k), "f1-score")
+
+            a(mapped)
+
+
+    _()
+    return
+
+
+@app.cell
+def _(a, map_cr_values, mo, values):
+    a(
+        mo.md("""
+    Recall (sensibilidade): Dos casos que realmente são positivos, quantos o modelo conseguiu identificar corretamente. É a capacidade de "não perder" casos positivos.
+    """)
+    )
+
+
+    def _():
+        for k, v in enumerate(values):
+            a(mo.md(v + ":"))
+            mapped = map_cr_values(str(k), "recall")
+
+            a(mapped)
+
+
+    _()
+    return
+
+
+@app.cell
+def _(a, map_cr_values, mo, values):
+    a(
+        mo.md("""
+    Precision (Precisão): Das predições que o modelo disse serem positivas, quantas realmente eram positivas. É sobre "não errar quando diz que é positivo".
+    """)
+    )
+
+
+    def _():
+        for k, v in enumerate(values):
+            a(mo.md(v + ":"))
+            mapped = map_cr_values(str(k), "precision")
+
+            a(mapped)
+
+
+    _()
+    return
+
+
+@app.cell
+def _(classification_reports, pd):
+    dados = []
+    for algoritmo, df_report in classification_reports.items():
+        for (
+            metrica
+        ) in df_report.drop("support").index:  # 0, 1, 2, accuracy, macro avg, weighted avg
+            for (
+                classe
+            ) in df_report.columns:  # precision, recall, f1-score, support
+                valor = df_report.loc[metrica, classe]
+                dados.append(
+                    {
+                        "algoritmo": algoritmo,
+                        "classe": classe,
+                        "metrica": metrica,
+                        "valor": valor,
+                    }
+                )
+
+    cr_melted = pd.DataFrame(dados)
+    cr_melted
+    return (cr_melted,)
+
+
+@app.cell
+def _(a, cr_melted, px):
+    def _():    
+        # Apenas classes 0, 1, 2 (sem accuracy, macro avg, weighted avg)
+        classes_principais = ['0', '1', '2']
+    
+        for metrica in ['precision', 'recall', 'f1-score']:
+            df_filtrado = cr_melted[
+                (cr_melted['metrica'] == metrica) & 
+                (cr_melted['classe'].isin(classes_principais))
+            ]
+        
+            fig = px.bar(df_filtrado,
+                         x='algoritmo',
+                         y='valor',
+                         color='classe', 
+                         title=f'{metrica.capitalize()} - Classes 0, 1, 2',
+                         barmode='stack')
+        
+            a(fig)
+
+    _()
+    return
+
+
+@app.cell
+def _(a, cr_melted, px):
+    def _():
+        df_pivot = cr_melted.pivot_table(
+            index='algoritmo', 
+            columns='metrica', 
+            values='valor', 
+            aggfunc='mean'  # Se houver múltiplas classes, faz a média
+        )
+    
+        fig_heatmap = px.imshow(df_pivot,
+                                title='Heatmap de Performance dos Algoritmos',
+                                labels={'x': 'Métricas', 'y': 'Algoritmos', 'color': 'Valor'},
+                                color_continuous_scale='RdYlBu_r')  # Vermelho=baixo, Azul=alto
+    
+        a(fig_heatmap)
+
+    _()
+    return
+
+
+@app.cell
+def _(a, cr_melted, mo, px):
+    def _():
+        a(mo.md("""
+            O scatterplot é ideal para visualizar trade-offs entre métricas de machine learning. Ao plotar Precision vs Recall, por exemplo, você vê instantaneamente quais algoritmos sacrificam precisão para capturar mais casos positivos, ou vice-versa. Isso facilita enormemente a seleção do modelo ideal baseado no equilíbrio desejado para seu problema específico.
+    Além dos trade-offs, o scatterplot revela correlações e outliers de forma visual. Algoritmos com comportamentos similares se agrupam, enquanto aqueles com performance incomum ficam isolados, ajudando na análise comparativa e na tomada de decisão sobre qual modelo usar em produção.
+        """))
+        # Criar DataFrame wide para scatterplot
+        df_wide = cr_melted.pivot_table(
+            index=['algoritmo', 'classe'], 
+            columns='metrica', 
+            values='valor'
+        ).reset_index()
+    
+        # Matrix de scatter plots
+        fig_scatter = px.scatter_matrix(df_wide,
+                                       dimensions=['precision', 'recall', 'f1-score'],  # Excluir support por escala diferente
+                                       color='algoritmo',
+                                       title='Scatter Plot Matrix - Trade-offs entre Métricas')
+    
+        a(fig_scatter)
 
     _()
     return

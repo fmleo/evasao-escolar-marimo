@@ -1098,9 +1098,9 @@ def _(
         clf = MLPClassifier(
             solver="lbfgs",
             alpha=1e-5,
-            hidden_layer_sizes=(5, 2),
+            # hidden_layer_sizes=(5, 2),
             random_state=1,
-            max_iter=1000,
+            max_iter=2000,
         )
 
         clf.fit(X_train, y_train)
@@ -1228,7 +1228,6 @@ def _(classification_reports, pd):
                 )
 
     cr_melted = pd.DataFrame(dados)
-    cr_melted
     return (cr_melted,)
 
 
@@ -1237,20 +1236,20 @@ def _(a, cr_melted, px):
     def _():    
         # Apenas classes 0, 1, 2 (sem accuracy, macro avg, weighted avg)
         classes_principais = ['0', '1', '2']
-    
+
         for metrica in ['precision', 'recall', 'f1-score']:
             df_filtrado = cr_melted[
                 (cr_melted['metrica'] == metrica) & 
                 (cr_melted['classe'].isin(classes_principais))
             ]
-        
+
             fig = px.bar(df_filtrado,
                          x='algoritmo',
                          y='valor',
                          color='classe', 
                          title=f'{metrica.capitalize()} - Classes 0, 1, 2',
                          barmode='stack')
-        
+
             a(fig)
 
     _()
@@ -1266,12 +1265,12 @@ def _(a, cr_melted, px):
             values='valor', 
             aggfunc='mean'  # Se houver múltiplas classes, faz a média
         )
-    
+
         fig_heatmap = px.imshow(df_pivot,
                                 title='Heatmap de Performance dos Algoritmos',
                                 labels={'x': 'Métricas', 'y': 'Algoritmos', 'color': 'Valor'},
                                 color_continuous_scale='RdYlBu_r')  # Vermelho=baixo, Azul=alto
-    
+
         a(fig_heatmap)
 
     _()
@@ -1291,13 +1290,13 @@ def _(a, cr_melted, mo, px):
             columns='metrica', 
             values='valor'
         ).reset_index()
-    
+
         # Matrix de scatter plots
         fig_scatter = px.scatter_matrix(df_wide,
                                        dimensions=['precision', 'recall', 'f1-score'],  # Excluir support por escala diferente
                                        color='algoritmo',
                                        title='Scatter Plot Matrix - Trade-offs entre Métricas')
-    
+
         a(fig_scatter)
 
     _()
